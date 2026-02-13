@@ -1,0 +1,96 @@
+openapi: 3.0.1
+info:
+  title: Generated API
+  description: |2-
+
+    Copyright 2025 Ehab Terra. Licensed under the Apache License 2.0. See LICENSE and NOTICE.
+  version: 1.0.0
+  contact:
+    name: Ehab
+    url: https://ehabterra.github.io/
+    email: ehabterra@hotmail.com
+  license:
+    name: ""
+paths:
+  /api/v1/gpus:
+    get:
+      tags:
+        - /api/v1
+      operationId: github.com/message-streaming-app/cmd/metrics.FuncLit:/Users/narinderkaur/codebase/go/src/github.com/narinder-kaur/message-streaming-app/cmd/metrics/main.go:48:20
+      parameters:
+        - name: string
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/github.com_gin-gonic_gin.H'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/github.com_gin-gonic_gin.H'
+  /api/v1/gpus/{id}/telemetry:
+    get:
+      tags:
+        - /api/v1
+      operationId: github.com/message-streaming-app/cmd/metrics.FuncLit:/Users/narinderkaur/codebase/go/src/github.com/narinder-kaur/message-streaming-app/cmd/metrics/main.go:89:34
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: start_time
+          in: query
+          schema:
+            type: string
+        - name: end_time
+          in: query
+          schema:
+            type: string
+        - name: string
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/go.mongodb.org_mongo-driver_bson.M'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/github.com_gin-gonic_gin.H'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/github.com_gin-gonic_gin.H'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/github.com_gin-gonic_gin.H'
+components:
+  schemas:
+    github.com_gin-gonic_gin.H:
+      type: object
