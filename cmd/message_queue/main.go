@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"net"
 	"os"
 	"strings"
@@ -10,30 +10,38 @@ import (
 )
 
 func main() {
-	addr := getEnv("BROKER_ADDR", ":9000")
-	// DELIVERY_MODE: "broadcast" = every consumer gets every message; "queue" = each message to one consumer
-	deliveryMode := broker.ParseDeliveryMode(strings.ToLower(getEnv("DELIVERY_MODE", "broadcast")))
-	srv := broker.New(deliveryMode)
+	// Initialize logger
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
+	// Get configuration from environment
+	addr := getEnv("BROKER_ADDR", ":9000")
+	deliveryModeStr := strings.ToLower(getEnv("DELIVERY_MODE", "broadcast"))
+	deliveryMode := broker.ParseDeliveryMode(deliveryModeStr)
+
+	// Create broker
+	srv := broker.NewBroker(deliveryMode, logger)
+
+	// Start listening
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
-		log.Fatal(err)
+		logger.Error("failed to listen", "addr", addr, "error", err)
+		os.Exit(1)
 	}
 	defer ln.Close()
 
-	log.Printf("Broker listening on %s (delivery=%s)", addr, deliveryMode)
+	logger.Info("broker started", "addr", addr, "delivery_mode", deliveryMode.String())
 
+	// Accept connections
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			log.Printf("accept: %v", err)
+			logger.Error("failed to accept connection", "error", err)
 			continue
 		}
-		log.Printf("INFO:accepted connection from %s", conn.RemoteAddr())
+		logger.Info("accepted connection", "remote_addr", conn.RemoteAddr())
 		go srv.HandleConn(conn)
 	}
 }
-
 func getEnv(key, defaultVal string) string {
 	if v := os.Getenv(key); v != "" {
 		return v

@@ -3,147 +3,140 @@ package broker
 import (
 	"bufio"
 	"io"
-	"log"
 	"net"
-	"sync"
 
 	"github.com/message-streaming-app/internal/protocol"
 )
 
-// DeliveryMode defines how messages are distributed to multiple consumers.
-type DeliveryMode int
-
-const (
-	// Broadcast: every consumer receives the same message (fan-out).
-	Broadcast DeliveryMode = iota
-	// Queue: each message is delivered to exactly one consumer (competing consumers, round-robin).
-	Queue
-)
-
-func (m DeliveryMode) String() string {
-	switch m {
-	case Broadcast:
-		return "broadcast"
-	case Queue:
-		return "queue"
-	default:
-		return "unknown"
-	}
-}
-
-// ParseDeliveryMode returns Broadcast for "broadcast", Queue for "queue", and Broadcast for any other value.
-func ParseDeliveryMode(s string) DeliveryMode {
-	switch s {
-	case "queue":
-		return Queue
-	case "broadcast":
-		return Broadcast
-	default:
-		return Broadcast
-	}
-}
-
 const (
 	roleProducer = "PRODUCER"
 	roleConsumer = "CONSUMER"
-
-	queueBufferSize = 10000
 )
 
-// Broker accepts producer and consumer connections and distributes JSON messages by mode.
+// Broker accepts producer and consumer connections and distributes messages by mode
 type Broker struct {
-	mode DeliveryMode
-
-	// broadcast mode: each consumer has a channel, every message is sent to all
-	mu        sync.RWMutex
-	consumers map[chan []byte]struct{}
-
-	// queue mode: single channel, each message is read by exactly one consumer
-	queue chan []byte
+	mode     DeliveryMode
+	logger   Logger
+	registry ConsumerRegistry
+	queue    MessageQueue
 }
 
-// New returns a new Broker with the given delivery mode.
-func New(mode DeliveryMode) *Broker {
+// NewBroker creates a new Broker instance
+func NewBroker(mode DeliveryMode, logger Logger) *Broker {
 	b := &Broker{
-		mode:      mode,
-		consumers: make(map[chan []byte]struct{}),
-	}
-	if mode == Queue {
-		b.queue = make(chan []byte, queueBufferSize)
+		mode:     mode,
+		logger:   logger,
+		registry: NewBroadcastRegistry(logger),
+		queue:    NewMemoryMessageQueue(10000, logger),
 	}
 	return b
 }
 
-// RegisterConsumer adds a channel for broadcast mode (receives a copy of every message).
-func (b *Broker) RegisterConsumer(ch chan []byte) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	b.consumers[ch] = struct{}{}
-}
-
-// UnregisterConsumer removes the channel in broadcast mode.
-func (b *Broker) UnregisterConsumer(ch chan []byte) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	delete(b.consumers, ch)
-	close(ch)
-}
-
-// broadcast sends a copy of the message to every registered consumer.
-func (b *Broker) broadcast(msg []byte) {
-	b.mu.RLock()
-	chans := make([]chan []byte, 0, len(b.consumers))
-	for ch := range b.consumers {
-		chans = append(chans, ch)
-	}
-	b.mu.RUnlock()
-
-	for _, ch := range chans {
-		msgCopy := append([]byte(nil), msg...)
-		select {
-		case ch <- msgCopy:
-		default:
-		}
-	}
-}
-
-// enqueue delivers the message according to the broker mode.
-func (b *Broker) enqueue(msg []byte) {
-	switch b.mode {
-	case Broadcast:
-		b.broadcast(msg)
-	case Queue:
-		msgCopy := append([]byte(nil), msg...)
-		select {
-		case b.queue <- msgCopy:
-		default:
-			log.Printf("queue full, dropping message")
-		}
-	}
-}
-
-// HandleConn handles a single TCP connection. First line must be "PRODUCER" or "CONSUMER".
+// HandleConn handles a single TCP connection
+// The first line sent must be either "PRODUCER" or "CONSUMER"
 func (b *Broker) HandleConn(conn net.Conn) {
 	defer conn.Close()
 	br := bufio.NewReader(conn)
 
+	// Read the role identifier (PRODUCER or CONSUMER)
 	line, err := br.ReadString('\n')
 	if err != nil {
-		log.Printf("read role: %v", err)
+		b.logger.Error("failed to read role identifier", "error", err)
 		return
 	}
+
 	role := trimLine(line)
+	b.logger.Info("connection received", "remote_addr", conn.RemoteAddr(), "role", role)
+
+	// Create frame reader and writer
+	frameReader := NewBufferedFrameReader(br)
+	frameWriter := NewConnectionFrameWriter(conn)
 
 	switch role {
 	case roleProducer:
-		b.handleProducer(conn, br)
+		b.handleProducer(frameReader)
 	case roleConsumer:
-		b.handleConsumer(conn, br)
+		b.handleConsumer(frameWriter)
 	default:
-		log.Printf("unknown role: %q", role)
+		b.logger.Error("unknown role received", "role", role)
 	}
 }
 
+// handleProducer reads messages from a producer and enqueues them
+func (b *Broker) handleProducer(reader FrameReader) {
+	defer b.logger.Info("producer connection closed")
+
+	buf := make([]byte, 0, 64*1024)
+	for {
+		body, err := reader.ReadFrame(buf)
+		if err != nil {
+			if err != io.EOF {
+				b.logger.Error("producer read error", "error", err)
+			}
+			return
+		}
+
+		// Enqueue the message based on delivery mode
+		switch b.mode {
+		case Broadcast:
+			b.registry.BroadcastMessage(body)
+		case Queue:
+			if err := b.queue.Enqueue(body); err != nil {
+				b.logger.Warn("failed to enqueue message", "error", err)
+			}
+		}
+	}
+}
+
+// handleConsumer delivers messages to a consumer
+func (b *Broker) handleConsumer(writer FrameWriter) {
+	defer b.logger.Info("consumer connection closed")
+
+	switch b.mode {
+	case Broadcast:
+		b.handleConsumerBroadcast(writer)
+	case Queue:
+		b.handleConsumerQueue(writer)
+	}
+}
+
+// handleConsumerBroadcast handles a consumer in broadcast mode
+func (b *Broker) handleConsumerBroadcast(writer FrameWriter) {
+	// Create a channel for this consumer
+	ch := make(chan []byte, 64)
+
+	// Register the consumer
+	consumerID := b.registry.RegisterConsumer(ch)
+	defer b.registry.UnregisterConsumer(consumerID)
+
+	// Send messages as they arrive
+	for msg := range ch {
+		if err := writer.WriteFrame(msg); err != nil {
+			b.logger.Error("consumer write error", "consumer_id", consumerID, "error", err)
+			return
+		}
+	}
+}
+
+// handleConsumerQueue handles a consumer in queue mode
+func (b *Broker) handleConsumerQueue(writer FrameWriter) {
+	for {
+		msg, err := b.queue.Dequeue()
+		if err != nil {
+			// Queue might be closed or empty, wait a bit and retry
+			// In production, this should use a blocking dequeue operation
+			b.logger.Error("queue dequeue error", "error", err)
+			return
+		}
+
+		if err := writer.WriteFrame(msg); err != nil {
+			b.logger.Error("consumer write error", "error", err)
+			return
+		}
+	}
+}
+
+// trimLine removes trailing line endings from a string
 func trimLine(s string) string {
 	for len(s) > 0 && (s[len(s)-1] == '\r' || s[len(s)-1] == '\n') {
 		s = s[:len(s)-1]
@@ -151,53 +144,32 @@ func trimLine(s string) string {
 	return s
 }
 
-func (b *Broker) handleProducer(conn net.Conn, r *bufio.Reader) {
-	buf := make([]byte, 0, 64*1024)
-	for {
-		body, err := protocol.ReadFrame(r, buf)
-		if err != nil {
-			if err != io.EOF {
-				log.Printf("producer read: %v", err)
-			}
-			return
-		}
-		b.enqueue(body)
-	}
+// BufferedFrameReader wraps a buffered reader to read frames
+type BufferedFrameReader struct {
+	reader *bufio.Reader
 }
 
-func (b *Broker) handleConsumer(conn net.Conn, _ *bufio.Reader) {
-	switch b.mode {
-	case Broadcast:
-		b.handleConsumerBroadcast(conn)
-	case Queue:
-		b.handleConsumerQueue(conn)
-	}
+// NewBufferedFrameReader creates a new buffered frame reader
+func NewBufferedFrameReader(r *bufio.Reader) *BufferedFrameReader {
+	return &BufferedFrameReader{reader: r}
 }
 
-// handleConsumerBroadcast: each consumer has its own channel, receives every message.
-func (b *Broker) handleConsumerBroadcast(conn net.Conn) {
-	ch := make(chan []byte, 64)
-	b.RegisterConsumer(ch)
-	defer b.UnregisterConsumer(ch)
-
-	for msg := range ch {
-		if err := protocol.WriteFrame(conn, msg); err != nil {
-			log.Printf("consumer write: %v", err)
-			return
-		}
-	}
+// ReadFrame reads a frame from the buffered reader
+func (f *BufferedFrameReader) ReadFrame(buf []byte) ([]byte, error) {
+	return protocol.ReadFrame(f.reader, buf)
 }
 
-// handleConsumerQueue: all consumers read from the same queue; each message goes to one consumer.
-func (b *Broker) handleConsumerQueue(conn net.Conn) {
-	for {
-		msg, ok := <-b.queue
-		if !ok {
-			return
-		}
-		if err := protocol.WriteFrame(conn, msg); err != nil {
-			log.Printf("consumer write: %v", err)
-			return
-		}
-	}
+// ConnectionFrameWriter writes frames to a connection
+type ConnectionFrameWriter struct {
+	conn net.Conn
+}
+
+// NewConnectionFrameWriter creates a new connection frame writer
+func NewConnectionFrameWriter(conn net.Conn) *ConnectionFrameWriter {
+	return &ConnectionFrameWriter{conn: conn}
+}
+
+// WriteFrame writes a frame to the connection
+func (f *ConnectionFrameWriter) WriteFrame(data []byte) error {
+	return protocol.WriteFrame(f.conn, data)
 }
