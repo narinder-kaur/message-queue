@@ -16,8 +16,52 @@ import (
 type MongoStore struct {
 	client     *mongo.Client
 	db         *mongo.Database
-	collection *mongo.Collection
+	collection CollectionAPI
 }
+
+// CollectionAPI abstracts required mongo.Collection methods to allow testing.
+type CollectionAPI interface {
+	InsertOne(context.Context, interface{}, ...*options.InsertOneOptions) (*mongo.InsertOneResult, error)
+	Distinct(context.Context, string, interface{}, ...*options.DistinctOptions) ([]interface{}, error)
+	CountDocuments(context.Context, interface{}, ...*options.CountOptions) (int64, error)
+	Find(context.Context, interface{}, ...*options.FindOptions) (CursorAPI, error)
+}
+
+// CursorAPI abstracts the mongo.Cursor methods used in QueryTelemetry.
+type CursorAPI interface {
+	Close(context.Context) error
+	Next(context.Context) bool
+	Decode(interface{}) error
+	Err() error
+}
+
+// realCollection adapts *mongo.Collection to CollectionAPI
+type realCollection struct{ c *mongo.Collection }
+
+func (r realCollection) InsertOne(ctx context.Context, doc interface{}, opts ...*options.InsertOneOptions) (*mongo.InsertOneResult, error) {
+	return r.c.InsertOne(ctx, doc, opts...)
+}
+func (r realCollection) Distinct(ctx context.Context, field string, filter interface{}, opts ...*options.DistinctOptions) ([]interface{}, error) {
+	return r.c.Distinct(ctx, field, filter, opts...)
+}
+func (r realCollection) CountDocuments(ctx context.Context, filter interface{}, opts ...*options.CountOptions) (int64, error) {
+	return r.c.CountDocuments(ctx, filter, opts...)
+}
+func (r realCollection) Find(ctx context.Context, filter interface{}, opts ...*options.FindOptions) (CursorAPI, error) {
+	cur, err := r.c.Find(ctx, filter, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return realCursor{cur}, nil
+}
+
+// realCursor adapts *mongo.Cursor to CursorAPI
+type realCursor struct{ c *mongo.Cursor }
+
+func (rc realCursor) Close(ctx context.Context) error        { return rc.c.Close(ctx) }
+func (rc realCursor) Next(ctx context.Context) bool           { return rc.c.Next(ctx) }
+func (rc realCursor) Decode(v interface{}) error              { return rc.c.Decode(v) }
+func (rc realCursor) Err() error                              { return rc.c.Err() }
 
 // NewMongoStore creates a new MongoDB store connection
 func NewMongoStore(ctx context.Context, mongoURI, dbName, collectionName string) (*MongoStore, error) {
@@ -49,7 +93,7 @@ func NewMongoStore(ctx context.Context, mongoURI, dbName, collectionName string)
 	return &MongoStore{
 		client:     client,
 		db:         db,
-		collection: collection,
+		collection: realCollection{collection},
 	}, nil
 }
 
