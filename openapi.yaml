@@ -1,3 +1,4 @@
+---
 openapi: 3.0.1
 info:
   title: Generated API
@@ -16,7 +17,7 @@ paths:
     get:
       tags:
         - /api/v1
-      operationId: github.com/message-streaming-app/cmd/metrics.FuncLit:/Users/narinderkaur/codebase/go/src/github.com/narinder-kaur/message-streaming-app/cmd/metrics/main.go:48:20
+      operationId: github.com/message-streaming-app/cmd/metrics.FuncLit:/Users/narinderkaur/codebase/go/src/github.com/narinder/message-streaming-app/cmd/metrics/main.go:48:20
       parameters:
         - name: string
           in: query
@@ -43,7 +44,7 @@ paths:
     get:
       tags:
         - /api/v1
-      operationId: github.com/message-streaming-app/cmd/metrics.FuncLit:/Users/narinderkaur/codebase/go/src/github.com/narinder-kaur/message-streaming-app/cmd/metrics/main.go:89:34
+      operationId: github.com/message-streaming-app/cmd/metrics.FuncLit:/Users/narinderkaur/codebase/go/src/github.com/narinder/message-streaming-app/cmd/metrics/main.go:89:34
       parameters:
         - name: id
           in: path

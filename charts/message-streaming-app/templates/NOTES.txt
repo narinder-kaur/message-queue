@@ -1,0 +1,8 @@
+Thank you for installing {{ .Chart.Name }}!
+
+Consumer:
+  kubectl get deployment {{ include "msa.fullname" . }}-consumer
+Producer (CronJob):
+  kubectl get cronjob {{ include "msa.fullname" . }}-producer
+MongoDB Service:
+  kubectl get svc {{ include "msa.fullname" . }}-mongodb

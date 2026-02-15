@@ -1,0 +1,17 @@
+---
+extends: default
+
+# Ignore Helm templates which contain Go template markers that are not valid YAML
+ignore: |
+  charts/**/templates/**
+
+rules:
+  line-length:
+    max: 200
+    level: warning
+  document-start:
+    level: warning
+  braces: disable
+  empty-lines:
+    max: 2
+    level: warning

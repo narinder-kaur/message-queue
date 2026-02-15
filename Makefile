@@ -1,5 +1,17 @@
 # Message Streaming App - Build targets
 BINDIR ?= bin
+# compute short git hash for tagging images; allow override via TAG env
+TAG := $(shell git rev-parse --short HEAD 2>/dev/null || echo latest)
+
+# per-service image names
+CONSUMER_IMAGE ?= $(REGISTRY)/consumer
+MESSAGE_QUEUE_IMAGE ?= $(REGISTRY)/message-queue
+METRICS_IMAGE ?= $(REGISTRY)/metrics
+PRODUCER_IMAGE ?= $(REGISTRY)/producer
+
+.PHONY: docker-build-all docker-push-all docker-build docker-push check_login
+
+.DEFAULT_GOAL := all
 
 .PHONY: all build clean message-queue producer consumer metrics build-spec test coverage coverage-check
 
@@ -25,6 +37,45 @@ metrics:
 
 clean:
 	rm -rf $(BINDIR)
+
+# Docker image helpers
+
+docker-build-consumer:
+	docker build -f dockerfiles/consumer/Dockerfile -t $(CONSUMER_IMAGE):$(TAG) .
+
+docker-build-message-queue:
+	docker build -f dockerfiles/message_queue/Dockerfile -t $(MESSAGE_QUEUE_IMAGE):$(TAG) .
+
+docker-build-metrics:
+	docker build -f dockerfiles/metrics/Dockerfile -t $(METRICS_IMAGE):$(TAG) .
+
+docker-build-producer:
+	docker build -f dockerfiles/producer/Dockerfile -t $(PRODUCER_IMAGE):$(TAG) .
+
+docker-build-all: docker-build-consumer docker-build-message-queue docker-build-metrics docker-build-producer
+
+
+docker-push-consumer: check_login
+	@echo "--- Pushing consumer image to registry ---"
+	docker push $(CONSUMER_IMAGE):$(TAG)
+
+docker-push-message-queue: check_login
+	@echo "--- Pushing message queue image to registry ---"
+	docker push $(MESSAGE_QUEUE_IMAGE):$(TAG)
+
+docker-push-metrics: check_login
+	@echo "--- Pushing metrics image to registry ---"
+	docker push $(METRICS_IMAGE):$(TAG)
+
+docker-push-producer: check_login
+	@echo "--- Pushing producer image to registry ---"
+	docker push $(PRODUCER_IMAGE):$(TAG)
+
+docker-push-all: docker-push-consumer docker-push-message-queue docker-push-metrics docker-push-producer
+
+check_login:
+	@echo "--- Ensuring Docker login ---"
+	@docker login $(REGISTRY) --username $(DOCKER_USERNAME) --password-stdin <<< "$(DOCKER_PASSWORD)"
 
 # Build OpenAPI spec using apispec
 .PHONY: build-spec
@@ -62,3 +113,25 @@ coverage-check: coverage
 	else \
 		echo "✓ Coverage check PASSED: $$coverage_percent% >= 70%"; \
 	fi
+
+# command for installing tools (e.g. apispec) - can be extended for other tools as needed
+.PHONY: install-tools
+install-tools:
+	@echo "Installing python"
+	@which python3 > /dev/null || (echo "Python3 is not installed. Please install Python3 to proceed." && exit 1)
+	@echo "Installing apispec..."
+	@go install github.com/ehabterra/apispec/cmd/apispec@latest
+
+# target to run yaml linting using kubeval
+.PHONY: lint-yaml
+lint-yaml:
+	@echo "Linting YAML files with yamlLint..."
+	@docker run -it --rm -v "$(CURDIR):/code" pipelinecomponents/yamllint yamllint .
+
+.PHONY: deploy
+deploy:
+	@echo "Deploying application using Helm..."
+	helm upgrade --install message-streaming-app charts/message-streaming-app -f charts/message-streaming-app/values.yaml --set consumer.image.tag=$(TAG) \
+		--set messageQueue.image.tag=$(TAG) \
+		--set metrics.image.tag=$(TAG) \
+		--set producer.image.tag=$(TAG)

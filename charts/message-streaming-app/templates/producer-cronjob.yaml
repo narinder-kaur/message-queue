@@ -1,0 +1,32 @@
+{{- if .Values.producer.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "msa.fullname" . }}-producer
+spec:
+  schedule: "{{ .Values.producer.schedule }}"
+  concurrencyPolicy: "{{ .Values.producer.concurrencyPolicy }}"
+  successfulJobsHistoryLimit: {{ .Values.producer.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.producer.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      parallelism: {{ .Values.producer.parallelism }}
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: producer
+              image: "{{ .Values.producer.image.repository }}:{{ .Values.producer.image.tag }}"
+              imagePullPolicy: {{ .Values.producer.image.pullPolicy }}
+              args: ["producer"]
+              {{- with .Values.producer.resources }}
+              resources:
+{{ toYaml . | nindent 16 }}
+              {{- else }}
+              resources: {}
+              {{- end }}
+          {{- if .Values.imagePullSecrets }}
+          imagePullSecrets:
+{{ toYaml .Values.imagePullSecrets | nindent 12 }}
+          {{- end }}
+{{- end }}

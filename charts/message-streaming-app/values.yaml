@@ -1,0 +1,104 @@
+---
+replicaCount: 1
+
+image:
+  repository: docker.io/narinder/message-streaming-app
+  tag: ""
+  pullPolicy: IfNotPresent
+
+consumer:
+  image:
+    repository: docker.io/narinder/consumer
+    tag: ""
+    pullPolicy: IfNotPresent
+  enabled: true
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+  hpa:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 50
+    useMemory: true
+    targetMemoryUtilizationPercentage: 70
+    # set to "cpu" or "memory" or "both"
+    metricType: "both"
+
+producer:
+  enabled: true
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Allow
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  parallelism: 0
+  resources: {}
+  image:
+    repository: docker.io/narinder/producer
+    tag: ""
+    pullPolicy: IfNotPresent
+
+messageQueue:
+  enabled: true
+  replicaCount: 1
+  resources: {}
+  image:
+    repository: docker.io/narinder/message-queue
+    tag: ""
+    pullPolicy: IfNotPresent
+
+metrics:
+  enabled: true
+  replicaCount: 1
+  resources: {}
+  image:
+    repository: docker.io/narinder/metrics
+    tag: ""
+    pullPolicy: IfNotPresent
+
+mongodb:
+  enabled: true
+  image:
+    repository: mongo
+    tag: 5.0
+  replicaCount: 1
+  resources: {}
+  persistence:
+    enabled: true
+    storageClass: ""
+    accessModes: ["ReadWriteOnce"]
+    size: 1Gi
+
+service:
+  type: ClusterIP
+  port: 8080
+
+securityContext:
+  runAsUser: 1000
+  runAsGroup: 3000
+  fsGroup: 2000
+
+probes:
+  enabled: true
+  liveness:
+    path: /healthz
+    port: 8080
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    path: /ready
+    port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""

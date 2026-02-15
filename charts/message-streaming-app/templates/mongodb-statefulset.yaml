@@ -1,0 +1,58 @@
+{{- if .Values.mongodb.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "msa.fullname" . }}-mongodb
+  labels:
+    {{ include "msa.labels" . | nindent 4 }}
+spec:
+  ports:
+    - port: 27017
+      targetPort: 27017
+  clusterIP: None
+  selector:
+    app: {{ include "msa.fullname" . }}-mongodb
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "msa.fullname" . }}-mongodb
+spec:
+  serviceName: {{ include "msa.fullname" . }}-mongodb
+  replicas: {{ .Values.mongodb.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "msa.fullname" . }}-mongodb
+  template:
+    metadata:
+      labels:
+        app: {{ include "msa.fullname" . }}-mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: "{{ .Values.mongodb.image.repository }}:{{ .Values.mongodb.image.tag }}"
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: data
+              mountPath: /data/db
+          {{- $res := toYaml .Values.mongodb.resources | trim }}
+          {{- if ne $res "" }}
+          resources: {{ $res | nindent 12 | trimPrefix "\n" }}
+          {{- else }}
+          resources: {}
+          {{- end }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+{{ toYaml .Values.mongodb.persistence.accessModes | nindent 8 }}
+        resources:
+          requests:
+            storage: {{ .Values.mongodb.persistence.size }}
+        {{- if .Values.mongodb.persistence.storageClass }}
+        storageClassName: {{ .Values.mongodb.persistence.storageClass }}
+        {{- end }}
+{{- end }}

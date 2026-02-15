@@ -1,0 +1,7 @@
+---
+apiVersion: v2
+name: message-streaming-app
+description: Helm chart for message-streaming-app components (consumer, producer, message-queue, metrics, mongodb)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

@@ -1,0 +1,14 @@
+{{- if .Values.consumer.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "msa.fullname" . }}-consumer
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app: {{ include "msa.fullname" . }}-consumer
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: 8080
+      protocol: TCP
+{{- end }}

@@ -1,0 +1,30 @@
+{{- if and .Values.consumer.enabled .Values.consumer.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "msa.fullname" . }}-consumer
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "msa.fullname" . }}-consumer
+  minReplicas: {{ .Values.consumer.hpa.minReplicas }}
+  maxReplicas: {{ .Values.consumer.hpa.maxReplicas }}
+  metrics:
+    {{- if or (eq .Values.consumer.hpa.metricType "cpu") (eq .Values.consumer.hpa.metricType "both") }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.consumer.hpa.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if or (eq .Values.consumer.hpa.metricType "memory") (eq .Values.consumer.hpa.metricType "both") }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.consumer.hpa.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}

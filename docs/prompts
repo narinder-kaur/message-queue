@@ -54,3 +54,22 @@ this csv reader should be acting only as a reader, which will read the file, thi
 Refactor the message_queue service, it should use the logger same as used in producer. and it should also split the code in interfaces and structs which are easily testable.
 
 Create a test command in makefile, which will run all of the test cases in all services, create another command which will also calculate test coverage and a test coverage check command, which check if the coverage is less than 70%, it fails, else it passes.
+
+I want to deploy these 4 services and mongodb to a kubernetes cluster. I want that consumer and producer services should be independely scalable to max size of 10. Producer service should be deployed as a cron job which runs at a given interval. Also multiple producer job can also run in parallel.
+Also deploy mongodb as a database in same cluster.
+I want to create helm charts for this requirement.
+
+Add Service resources for message-queue and metrics (currently deployments only).
+Add adjustable securityContext, probes, and more advanced HPA (memory/custom metrics).
+Run a helm lint/helm template locally to validate templates
+
+Add a Makefile targets to build/tag/push all images.
+Update Helm values.yaml to point each component to its dedicated image tag.
+
+charts contain same repository name in all deployments and dockerfile. Each image name should be based on its own. and tag should be a git hash of the commit. update all files in helm charts and dockerfiles.
+
+
+
+////////////
+GIT_HASH=$(git rev-parse --short HEAD) helm upgrade --install ....
+/////////////
