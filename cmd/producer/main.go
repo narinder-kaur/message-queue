@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"net"
 	"os"
@@ -31,9 +32,10 @@ func main() {
 	// Resolve CSV path
 	absCSVPath, err := filepath.Abs(csvPath)
 	if err != nil {
-		logger.Error("failed to resolve CSV path", "error", err)
+		logger.Error(fmt.Sprintf("failed to resolve CSV path:%s", csvPath), "error", err)
 		os.Exit(1)
 	}
+	logger.Info("csv path resolved successfully", "csv_path", absCSVPath)
 
 	// Create producer
 	prod := producer.NewProducer(conn, logger)

@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	addr := getEnv("BROKER_ADDR", "localhost:9000")
+	addr := getEnv("BROKER_ADDR", "localhost:9080")
 
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {

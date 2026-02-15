@@ -153,3 +153,8 @@ deploy:
 		--set messageQueue.image.tag=$(TAG) \
 		--set metrics.image.tag=$(TAG) \
 		--set producer.image.tag=$(TAG)
+
+.PHONY: create-cluster
+create-cluster:
+	@echo "Creating Kubernetes cluster with kind..."
+	export HOSTPATH="$(CURDIR)/internal/data" && envsubst < ./kind/config.yaml | kind create cluster --name kind-cluster --config -

@@ -10,7 +10,12 @@ spec:
   failedJobsHistoryLimit: {{ .Values.producer.failedJobsHistoryLimit }}
   jobTemplate:
     spec:
-      parallelism: {{ .Values.producer.parallelism }}
+      {{- if gt (int .Values.producer.parallelism) 0 }}
+      parallelism: {{ int .Values.producer.parallelism }}
+      {{- end }}
+      {{- if gt (int .Values.producer.completions) 0 }}
+      completions: {{ int .Values.producer.completions }}
+      {{- end }}
       template:
         spec:
           restartPolicy: OnFailure
@@ -19,9 +24,15 @@ spec:
               image: '{{ printf "%s:%s" .Values.producer.image.repository (default "latest" .Values.producer.image.tag) }}'
               imagePullPolicy: {{ .Values.producer.image.pullPolicy }}
               args: ["producer"]
+              volumeMounts:
+               - name: hostpath-volume
+                 mountPath: /data
               env:
                 - name: BROKER_ADDR
                   value: "{{ .Values.producer.brokerAddr }}"
+                - name: CSV_PATH
+                  value: "{{ .Values.producer.csvPath }}"
+                  
               {{- with .Values.producer.resources }}
               resources:
 {{ toYaml . | nindent 16 }}
@@ -32,4 +43,9 @@ spec:
           imagePullSecrets:
 {{ toYaml .Values.imagePullSecrets | nindent 12 }}
           {{- end }}
+          volumes:
+            - name: hostpath-volume
+              hostPath:
+                path: "{{ .Values.producer.dataHostPath }}"
+                type: DirectoryOrCreate
 {{- end }}

@@ -27,12 +27,12 @@ func startHTTPServer(port string, logger *slog.Logger) *http.Server {
 		Handler: mux,
 	}
 
-	// go func() {
-	logger.Info("starting health HTTP server", "addr", ":"+port)
-	if err := srvHTTP.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		logger.Error("http server error", "error", err)
-	}
-	// }()
+	go func() {
+		logger.Info("starting health HTTP server", "addr", ":"+port)
+		if err := srvHTTP.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("http server error", "error", err)
+		}
+	}()
 	return srvHTTP
 }
 func shutdownHTTPServer(srv *http.Server, logger *slog.Logger) {

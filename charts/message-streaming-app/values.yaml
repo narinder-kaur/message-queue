@@ -4,15 +4,15 @@ replicaCount: 1
 image:
   repository: docker.io/narinder/message-streaming-app
   tag: ""
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 consumer:
   image:
     repository: docker.io/narinder/consumer
     tag: ""
-    pullPolicy: IfNotPresent
+    pullPolicy: Always
   enabled: true
-  replicaCount: 1
+  replicaCount: 10
   resources:
     limits:
       cpu: "500m"
@@ -35,17 +35,20 @@ consumer:
 
 producer:
   enabled: true
-  schedule: "*/5 * * * *"
+  schedule: "* * * * *"
   concurrencyPolicy: Allow
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 1
-  parallelism: 0
+  parallelism: 1
+  completions: 1
   resources: {}
+  dataHostPath: "/data"
+  csvPath: "/data/dcgm_metrics_20250718_134233.csv"
   brokerAddr: "message-streaming-app-message-queue:9080"
   image:
     repository: docker.io/narinder/producer
     tag: ""
-    pullPolicy: IfNotPresent
+    pullPolicy: Always
 
 messageQueue:
   enabled: true
@@ -54,7 +57,7 @@ messageQueue:
   image:
     repository: docker.io/narinder/message-queue
     tag: ""
-    pullPolicy: IfNotPresent
+    pullPolicy: Always
   tcpPort: 9080
   port: 8080
 
@@ -86,6 +89,12 @@ mongodb:
 service:
   type: ClusterIP
   port: 8080
+
+mongodbService:
+  enabled: false
+  type: NodePort
+  port: 27017
+  nodePort: 31001
 
 securityContext:
   runAsUser: 1000
