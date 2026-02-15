@@ -9,3 +9,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags='-s -w' -o /out/metrics ./
 FROM gcr.io/distroless/static-debian12
 COPY --from=builder /out/metrics /usr/local/bin/metrics
 ENTRYPOINT ["/usr/local/bin/metrics"]
+
+ENV PORT=8080
+EXPOSE 8080

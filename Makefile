@@ -9,7 +9,7 @@ MESSAGE_QUEUE_IMAGE ?= $(REGISTRY)/message-queue
 METRICS_IMAGE ?= $(REGISTRY)/metrics
 PRODUCER_IMAGE ?= $(REGISTRY)/producer
 
-.PHONY: docker-build-all docker-push-all docker-build docker-push check_login
+.PHONY: docker-build-all docker-push-all docker-build docker-push check_login. check_docker_registry check_docker_credentials
 
 .DEFAULT_GOAL := all
 
@@ -40,16 +40,16 @@ clean:
 
 # Docker image helpers
 
-docker-build-consumer:
+docker-build-consumer: check_docker_registry
 	docker build -f dockerfiles/consumer/Dockerfile -t $(CONSUMER_IMAGE):$(TAG) .
 
-docker-build-message-queue:
+docker-build-message-queue: check_docker_registry
 	docker build -f dockerfiles/message_queue/Dockerfile -t $(MESSAGE_QUEUE_IMAGE):$(TAG) .
 
-docker-build-metrics:
+docker-build-metrics: check_docker_registry
 	docker build -f dockerfiles/metrics/Dockerfile -t $(METRICS_IMAGE):$(TAG) .
 
-docker-build-producer:
+docker-build-producer: check_docker_registry
 	docker build -f dockerfiles/producer/Dockerfile -t $(PRODUCER_IMAGE):$(TAG) .
 
 docker-build-all: docker-build-consumer docker-build-message-queue docker-build-metrics docker-build-producer
@@ -72,6 +72,24 @@ docker-push-producer: check_login
 	docker push $(PRODUCER_IMAGE):$(TAG)
 
 docker-push-all: docker-push-consumer docker-push-message-queue docker-push-metrics docker-push-producer
+
+check_docker_registry:
+	@echo "--- Checking Docker registry environment variable ---"
+	@if [ -z "$(REGISTRY)" ]; then \
+		echo "Error: REGISTRY environment variable is not set. Please set it to your Docker registry URL (e.g., docker.io/yourusername)"; \
+		exit 1; \
+	fi
+
+check_docker_credentials:
+	@echo "--- Checking Docker environment variables---"
+	@if [ -z "$(DOCKER_USERNAME)" ]; then \
+		echo "Error: DOCKER_USERNAME environment variable is not set. Please set it to your Docker registry username"; \
+		exit 1; \
+	fi
+	@if [ -z "$(DOCKER_PASSWORD)" ]; then \
+		echo "Error: DOCKER_PASSWORD environment variable is not set. Please set it to your Docker registry password"; \
+		exit 1; \
+	fi
 
 check_login:
 	@echo "--- Ensuring Docker login ---"

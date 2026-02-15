@@ -29,6 +29,9 @@ consumer:
     targetMemoryUtilizationPercentage: 70
     # set to "cpu" or "memory" or "both"
     metricType: "both"
+  brokerAddr: "message-streaming-app-message-queue:9080"
+  port: 8080
+  dbAddr: "mongodb://message-streaming-app-mongodb:27017"
 
 producer:
   enabled: true
@@ -38,6 +41,7 @@ producer:
   failedJobsHistoryLimit: 1
   parallelism: 0
   resources: {}
+  brokerAddr: "message-streaming-app-message-queue:9080"
   image:
     repository: docker.io/narinder/producer
     tag: ""
@@ -51,6 +55,8 @@ messageQueue:
     repository: docker.io/narinder/message-queue
     tag: ""
     pullPolicy: IfNotPresent
+  tcpPort: 9080
+  port: 8080
 
 metrics:
   enabled: true
@@ -59,7 +65,10 @@ metrics:
   image:
     repository: docker.io/narinder/metrics
     tag: ""
-    pullPolicy: IfNotPresent
+    pullPolicy: Always
+  port: 8080
+  dbAddr: "mongodb://message-streaming-app-mongodb:27017"
+
 
 mongodb:
   enabled: true

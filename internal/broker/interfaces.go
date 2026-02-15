@@ -69,6 +69,8 @@ type ConsumerRegistry interface {
 
 	// GetConsumerCount returns the number of registered consumers
 	GetConsumerCount() int
+	// Close closes the registry and releases resources (closes consumer channels)
+	Close() error
 }
 
 // FrameReader defines the interface for reading frames from a connection

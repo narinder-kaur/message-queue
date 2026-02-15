@@ -21,11 +21,16 @@ spec:
         fsGroup: {{ .Values.securityContext.fsGroup }}
       containers:
         - name: metrics
-          image: "{{ .Values.metrics.image.repository }}:{{ .Values.metrics.image.tag }}"
+          image: '{{ printf "%s:%s" .Values.metrics.image.repository (default "latest" .Values.metrics.image.tag) }}'
           imagePullPolicy: {{ .Values.metrics.image.pullPolicy }}
           args: ["metrics"]
           ports:
-            - containerPort: 8080
+            - containerPort: {{ .Values.metrics.port }}
+          env:
+            - name: PORT
+              value: "{{ .Values.metrics.port }}"
+            - name: MONGODB_URI
+              value: "{{ .Values.metrics.dbAddr }}"
           {{- with .Values.metrics.resources }}
           resources:
 {{ toYaml . | nindent 12 }}

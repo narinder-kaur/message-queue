@@ -6,8 +6,8 @@ import (
 
 // MemoryMessageQueue is an in-memory queue implementation
 type MemoryMessageQueue struct {
-	queue chan []byte
-	size  int
+	queue  chan []byte
+	size   int
 	logger Logger
 }
 

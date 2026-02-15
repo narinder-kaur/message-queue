@@ -21,11 +21,19 @@ spec:
         fsGroup: {{ .Values.securityContext.fsGroup }}
       containers:
         - name: message-queue
-          image: "{{ .Values.messageQueue.image.repository }}:{{ .Values.messageQueue.image.tag }}"
+          image: '{{ printf "%s:%s" .Values.messageQueue.image.repository (default "latest" .Values.messageQueue.image.tag) }}'
           imagePullPolicy: {{ .Values.messageQueue.image.pullPolicy }}
           args: ["message-queue"]
           ports:
-            - containerPort: 8080
+            - name: http
+              containerPort: {{ .Values.messageQueue.port }}
+            - name: tcp
+              containerPort: {{ .Values.messageQueue.tcpPort }}
+          env:
+            - name: HTTP_PORT
+              value: "{{ .Values.messageQueue.port }}"
+            - name: TCP_PORT
+              value: "{{ .Values.messageQueue.tcpPort }}"
           {{- with .Values.messageQueue.resources }}
           resources:
 {{ toYaml . | nindent 12 }}

@@ -10,9 +10,9 @@ import (
 // StoreAdapter wraps a MongoDB store implementation to match the Store interface
 // This allows us to adapt external implementations to our interface boundaries
 type StoreAdapter struct {
-	queryFunc     func(context.Context, string, *time.Time, *time.Time, int, int, bool) ([]bson.M, int64, error)
-	listGPUsFunc  func(context.Context) ([]string, error)
-	closeFunc     func(context.Context) error
+	queryFunc    func(context.Context, string, *time.Time, *time.Time, int, int, bool) ([]bson.M, int64, error)
+	listGPUsFunc func(context.Context) ([]string, error)
+	closeFunc    func(context.Context) error
 }
 
 // NewStoreAdapter creates a new store adapter

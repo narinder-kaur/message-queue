@@ -6,7 +6,9 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/message-streaming-app/internal/metrics"
@@ -77,7 +79,14 @@ func main() {
 	))
 
 	// Health check endpoint
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, `{"status":"ok"}`)
+	})
+
+	// Health check endpoint
+	mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintf(w, `{"status":"ok"}`)
@@ -87,9 +96,30 @@ func main() {
 	addr := fmt.Sprintf(":%s", config.Port)
 	logger.Info("starting metrics service", "addr", addr)
 
-	if err := http.ListenAndServe(addr, mux); err != nil {
-		logger.Error("server error", "error", err)
-		os.Exit(1)
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: mux,
+	}
+
+	// Run server in background
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("server error", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	// Graceful shutdown on signal
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+
+	<-stop
+	logger.Info("shutting down metrics server")
+
+	ctxShutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctxShutdown); err != nil {
+		logger.Error("metrics server shutdown error", "error", err)
 	}
 }
 
@@ -114,8 +144,8 @@ func newConfigFromEnv() *config {
 
 	return &config{
 		Port:         getEnv("METRICS_PORT", "8080"),
-		MongoURI:     getEnv("MONGO_URI", "mongodb://localhost:27017"),
-		DBName:       getEnv("MONGO_DB", "message_streaming"),
+		MongoURI:     getEnv("MONGODB_URI", "mongodb://localhost:27017"),
+		DBName:       getEnv("MONGODB_DATABASE", "message_streaming"),
 		Collection:   getEnv("MONGO_COLLECTION", "metrics"),
 		AuthToken:    os.Getenv("AUTH_TOKEN"),
 		DefaultLimit: defaultLimit,

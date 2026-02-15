@@ -18,7 +18,7 @@ func main() {
 
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
-		log.Fatalf("dial: %v", err)
+		log.Fatalf("dial(%v): %v", addr, err)
 	}
 	defer conn.Close()
 
@@ -31,8 +31,8 @@ func main() {
 
 	// Initialize MongoDB storage
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	mongoURI := getEnv("MONGO_URI", "mongodb://localhost:27017")
-	dbName := getEnv("MONGO_DB", "message_streaming")
+	mongoURI := getEnv("MONGODB_URI", "mongodb://localhost:27017")
+	dbName := getEnv("MONGODB_DATABASE", "message_streaming")
 	collectionName := getEnv("MONGO_COLLECTION", "metrics")
 
 	mongoStore, err := storage.NewMongoStore(ctx, mongoURI, dbName, collectionName)

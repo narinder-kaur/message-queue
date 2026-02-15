@@ -32,6 +32,17 @@ func NewBroker(mode DeliveryMode, logger Logger) *Broker {
 	return b
 }
 
+// Close shuts down broker internals (registry and queue)
+func (b *Broker) Close() error {
+	if b.queue != nil {
+		_ = b.queue.Close()
+	}
+	if b.registry != nil {
+		_ = b.registry.Close()
+	}
+	return nil
+}
+
 // HandleConn handles a single TCP connection
 // The first line sent must be either "PRODUCER" or "CONSUMER"
 func (b *Broker) HandleConn(conn net.Conn) {

@@ -21,11 +21,16 @@ spec:
         fsGroup: {{ .Values.securityContext.fsGroup }}
       containers:
         - name: consumer
-          image: "{{ .Values.consumer.image.repository }}:{{ .Values.consumer.image.tag }}"
+          image: '{{ printf "%s:%s" .Values.consumer.image.repository (default "latest" .Values.consumer.image.tag) }}'
           imagePullPolicy: {{ .Values.consumer.image.pullPolicy }}
           args: ["consumer"]
           ports:
-            - containerPort: 8080
+            - containerPort: {{ .Values.consumer.port }}
+          env:
+            - name: BROKER_ADDR
+              value: "{{ .Values.consumer.brokerAddr }}"
+            - name: MONGODB_URI
+              value: "{{ .Values.consumer.dbAddr }}"
           {{- with .Values.consumer.resources }}
           resources:
 {{ toYaml . | nindent 12 }}
@@ -34,21 +39,37 @@ spec:
           {{- end }}
           {{- if .Values.probes.enabled }}
           livenessProbe:
-            httpGet:
-              path: {{ .Values.probes.liveness.path }}
-              port: {{ .Values.probes.liveness.port }}
-            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
-            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
-            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
-            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+              exec:
+                command: ["/bin/sh", "-c", "nc -z $(echo $BROKER_ADDR | cut -d: -f1) $(echo $BROKER_ADDR | cut -d: -f2)"]
+              initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+              periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+              timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+              failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
           readinessProbe:
-            httpGet:
-              path: {{ .Values.probes.readiness.path }}
-              port: {{ .Values.probes.readiness.port }}
-            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
-            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
-            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
-            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+              exec:
+                command: 
+                - "/bin/sh"
+                - "-c"
+                - "nc -z $(echo $BROKER_ADDR | cut -d: -f1) $(echo $BROKER_ADDR | cut -d: -f2)"
+              initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+              periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+              timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+              failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+        #     httpGet:
+        #       path: {{ .Values.probes.liveness.path }}
+        #       port: {{ .Values.probes.liveness.port }}
+        #     initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+        #     periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+        #     timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+        #     failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+        #   readinessProbe:
+        #     httpGet:
+        #       path: {{ .Values.probes.readiness.path }}
+        #       port: {{ .Values.probes.readiness.port }}
+        #     initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+        #     periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+        #     timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+        #     failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
           {{- end }}
       {{- if .Values.imagePullSecrets }}
       imagePullSecrets:

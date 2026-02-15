@@ -69,3 +69,14 @@ func (r *BroadcastRegistry) GetConsumerCount() int {
 	defer r.mu.RUnlock()
 	return len(r.consumers)
 }
+
+// Close closes all consumer channels and clears the registry
+func (r *BroadcastRegistry) Close() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for id, ch := range r.consumers {
+		close(ch)
+		delete(r.consumers, id)
+	}
+	return nil
+}

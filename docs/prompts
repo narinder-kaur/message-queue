@@ -68,8 +68,4 @@ Update Helm values.yaml to point each component to its dedicated image tag.
 
 charts contain same repository name in all deployments and dockerfile. Each image name should be based on its own. and tag should be a git hash of the commit. update all files in helm charts and dockerfiles.
 
-
-
-////////////
-GIT_HASH=$(git rev-parse --short HEAD) helm upgrade --install ....
-/////////////
+I see a problem in port mappings. Dockefiles does not have any port forwarding command. It should have a port open per service. Every kubernetes file should reflect the same in environement and services file, and also in value file. Please make required changes.

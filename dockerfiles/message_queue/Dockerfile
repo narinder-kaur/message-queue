@@ -9,3 +9,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags='-s -w' -o /out/message-queue ./
 FROM gcr.io/distroless/static-debian12
 COPY --from=builder /out/message-queue /usr/local/bin/message-queue
 ENTRYPOINT ["/usr/local/bin/message-queue"]
+
+EXPOSE 9080
+EXPOSE 8080

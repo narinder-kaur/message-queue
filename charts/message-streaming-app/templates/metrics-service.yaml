@@ -8,7 +8,7 @@ spec:
   selector:
     app: {{ include "msa.fullname" . }}-metrics
   ports:
-    - port: {{ .Values.service.port }}
-      targetPort: 8080
+    - port: {{ .Values.metrics.port }}
+      targetPort: {{ .Values.metrics.port }}
       protocol: TCP
 {{- end }}

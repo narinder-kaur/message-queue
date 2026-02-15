@@ -16,9 +16,12 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: producer
-              image: "{{ .Values.producer.image.repository }}:{{ .Values.producer.image.tag }}"
+              image: '{{ printf "%s:%s" .Values.producer.image.repository (default "latest" .Values.producer.image.tag) }}'
               imagePullPolicy: {{ .Values.producer.image.pullPolicy }}
               args: ["producer"]
+              env:
+                - name: BROKER_ADDR
+                  value: "{{ .Values.producer.brokerAddr }}"
               {{- with .Values.producer.resources }}
               resources:
 {{ toYaml . | nindent 16 }}

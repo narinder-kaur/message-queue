@@ -8,7 +8,12 @@ spec:
   selector:
     app: {{ include "msa.fullname" . }}-message-queue
   ports:
-    - port: {{ .Values.service.port }}
-      targetPort: 8080
+    - name: http
+      port: {{ .Values.messageQueue.port }}
+      targetPort: {{ .Values.messageQueue.port }}
+      protocol: TCP
+    - name: tcp
+      port: {{ .Values.messageQueue.tcpPort }}
+      targetPort: {{ .Values.messageQueue.tcpPort }}
       protocol: TCP
 {{- end }}

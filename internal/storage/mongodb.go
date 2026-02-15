@@ -58,10 +58,10 @@ func (r realCollection) Find(ctx context.Context, filter interface{}, opts ...*o
 // realCursor adapts *mongo.Cursor to CursorAPI
 type realCursor struct{ c *mongo.Cursor }
 
-func (rc realCursor) Close(ctx context.Context) error        { return rc.c.Close(ctx) }
-func (rc realCursor) Next(ctx context.Context) bool           { return rc.c.Next(ctx) }
-func (rc realCursor) Decode(v interface{}) error              { return rc.c.Decode(v) }
-func (rc realCursor) Err() error                              { return rc.c.Err() }
+func (rc realCursor) Close(ctx context.Context) error { return rc.c.Close(ctx) }
+func (rc realCursor) Next(ctx context.Context) bool   { return rc.c.Next(ctx) }
+func (rc realCursor) Decode(v interface{}) error      { return rc.c.Decode(v) }
+func (rc realCursor) Err() error                      { return rc.c.Err() }
 
 // NewMongoStore creates a new MongoDB store connection
 func NewMongoStore(ctx context.Context, mongoURI, dbName, collectionName string) (*MongoStore, error) {

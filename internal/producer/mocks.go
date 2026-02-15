@@ -8,9 +8,9 @@ import (
 
 // MockLogger is a logger implementation for testing
 type MockLogger struct {
-	Logs  []string
+	Logs   []string
 	Fatals []string
-	mu    sync.Mutex
+	mu     sync.Mutex
 }
 
 func NewMockLogger() *MockLogger {
@@ -34,10 +34,10 @@ func (l *MockLogger) Fatalf(format string, v ...interface{}) {
 
 // MockMessageWriter is a message writer implementation for testing
 type MockMessageWriter struct {
-	Messages []*message.Message
-	mu       sync.Mutex
+	Messages    []*message.Message
+	mu          sync.Mutex
 	shouldError bool
-	errorMsg string
+	errorMsg    string
 }
 
 func NewMockMessageWriter() *MockMessageWriter {

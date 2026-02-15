@@ -8,7 +8,7 @@ spec:
   selector:
     app: {{ include "msa.fullname" . }}-consumer
   ports:
-    - port: {{ .Values.service.port }}
-      targetPort: 8080
+    - port: {{ .Values.consumer.port }}
+      targetPort: {{ .Values.consumer.port }}
       protocol: TCP
 {{- end }}

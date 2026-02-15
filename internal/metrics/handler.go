@@ -182,12 +182,12 @@ func LoggingMiddleware(logger Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
-			
+
 			// Create a response writer wrapper to capture status
 			wrapped := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
-			
+
 			next.ServeHTTP(wrapped, r)
-			
+
 			latency := time.Since(start)
 			logger.Info(
 				"http request",
@@ -205,7 +205,7 @@ func AuthMiddleware(authenticator Authenticator, logger Logger) func(http.Handle
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")
-			
+
 			// Parse Bearer token
 			var token string
 			if authHeader != "" {
@@ -214,7 +214,7 @@ func AuthMiddleware(authenticator Authenticator, logger Logger) func(http.Handle
 					token = parts[1]
 				}
 			}
-			
+
 			if !authenticator.Authenticate(token) {
 				logger.Warn("authentication failed", "path", r.URL.Path)
 				w.Header().Set("Content-Type", "application/json")
@@ -222,7 +222,7 @@ func AuthMiddleware(authenticator Authenticator, logger Logger) func(http.Handle
 				json.NewEncoder(w).Encode(map[string]string{"error": "unauthorized"})
 				return
 			}
-			
+
 			next.ServeHTTP(w, r)
 		})
 	}

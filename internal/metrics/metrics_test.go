@@ -82,8 +82,8 @@ func TestTokenAuthenticatorNoTokenRequired(t *testing.T) {
 // TestDefaultQueryParserParseInt tests parsing integer parameters
 func TestDefaultQueryParserParseInt(t *testing.T) {
 	params := map[string][]string{
-		"limit": {"50"},
-		"page":  {"2"},
+		"limit":   {"50"},
+		"page":    {"2"},
 		"invalid": {"abc"},
 	}
 	parser := NewDefaultQueryParser(params)
