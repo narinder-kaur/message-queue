@@ -140,15 +140,17 @@ install-tools:
 	@echo "Installing apispec..."
 	@go install github.com/ehabterra/apispec/cmd/apispec@latest
 	@echo "Installing yaml-merge-cli..."
-	@go install github.com/ericwenn/yaml-merge-cli
+	@go get github.com/ericwenn/yaml-merge-cli
 
 .PHONY: generate-openapi
 generate-openapi: install-tools
 	@echo "Generating OpenAPI specification..."
-	@apispec -o tempout.yaml
-	@go get github.com/ericwenn/yaml-merge-cli
-	yaml-merge-cli tempout.yaml apispec.yaml > openapi.yaml
-	rm tempout.yaml
+	@apispec -o ./docs/openapi.yaml -O 3.0.1
+	@yq -i '.servers[0].description = "Localhost server"' ./docs/openapi.yaml
+	@yq -i '.servers[0].url = "http://localhost:8080"' ./docs/openapi.yaml
+	@yq -i '.servers[1].description = "Kube server"' ./docs/openapi.yaml
+	@yq -i '.servers[1].url = "http://localhost:31002"' ./docs/openapi.yaml
+
 # target to run yaml linting using kubeval
 .PHONY: lint-yaml
 lint-yaml:

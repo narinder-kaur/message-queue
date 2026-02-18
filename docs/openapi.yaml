@@ -1,0 +1,119 @@
+openapi: 3.0.1
+info:
+  title: Generated API
+  description: |2-
+
+    Copyright 2025 Ehab Terra. Licensed under the Apache License 2.0. See LICENSE and NOTICE.
+  version: 1.0.0
+  contact:
+    name: Ehab
+    url: https://ehabterra.github.io/
+    email: ehabterra@hotmail.com
+  license:
+    name: ""
+paths:
+  /api/v1/gpus:
+    get:
+      tags:
+        - /api/v1
+      operationId: github.com/message-streaming-app/internal/metrics.ListGPUs
+      parameters:
+        - name: ""
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        default:
+          description: Status code could not be determined
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+  /api/v1/gpus/{id}/telemetry:
+    get:
+      tags:
+        - /api/v1
+      operationId: github.com/message-streaming-app/internal/metrics.QueryGPUTelemetry
+      parameters:
+        - name: ""
+          in: query
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          x-warning: This parameter is present in the path but not found in the code.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        default:
+          description: Status code could not be determined
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+  /healthz:
+    get:
+      operationId: github.com/message-streaming-app/internal/metrics.FuncLit:/Users/narinderkaur/codebase/go/src/github.com/narinder-kaur/message-streaming-app/internal/metrics/gin_adapter.go:88:25
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/github.com_gin-gonic_gin.H'
+  /openapi.yaml:
+    get:
+      operationId: github.com/message-streaming-app/internal/metrics.FuncLit:/Users/narinderkaur/codebase/go/src/github.com/narinder-kaur/message-streaming-app/internal/metrics/gin_adapter.go:92:30
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
+  /ready:
+    get:
+      operationId: github.com/message-streaming-app/internal/metrics.FuncLit:/Users/narinderkaur/codebase/go/src/github.com/narinder-kaur/message-streaming-app/internal/metrics/gin_adapter.go:89:23
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/github.com_gin-gonic_gin.H'
+  /swagger/*any:
+    get:
+      operationId: github.com/swaggo/gin-swagger.github.com/swaggo/gin-swagger/ginSwagger.WrapHandler
+      responses:
+        default:
+          description: Default response (no response found)
+          content:
+            application/json:
+              schema:
+                type: object
+components:
+  schemas:
+    github.com_gin-gonic_gin.H:
+      type: object
+servers:
+  - description: Localhost server
+    url: http://localhost:8080
+  - description: Kube server
+    url: http://localhost:31002

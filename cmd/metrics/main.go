@@ -1,3 +1,12 @@
+// @title Metrics Service API
+// @version 1.0
+// @description API for querying GPU telemetry and listing GPUs.
+// @contact.name Narinder Kaur
+// @contact.email dummy@hotmail.com
+// @license.name Apache 2.0
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
 package main
 
 import (

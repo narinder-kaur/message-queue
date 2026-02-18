@@ -12,7 +12,7 @@ consumer:
     tag: ""
     pullPolicy: Always
   enabled: true
-  replicaCount: 10
+  replicaCount: 1
   resources:
     limits:
       cpu: "500m"
@@ -39,8 +39,8 @@ producer:
   concurrencyPolicy: Allow
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 1
-  parallelism: 10
-  completions: 10
+  parallelism: 3
+  completions: 3
   resources: {}
   dataHostPath: "/data"
   csvPath: "/data/dcgm_metrics_20250718_134233.csv"
