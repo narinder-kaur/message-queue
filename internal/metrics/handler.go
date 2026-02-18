@@ -14,6 +14,7 @@ type Handler struct {
 	authenticator Authenticator
 	sorter        Sorter
 	defaultLimit  int
+	service       *Service
 }
 
 // NewHandler creates a new metrics handler
@@ -27,12 +28,14 @@ func NewHandler(
 	if defaultLimit <= 0 {
 		defaultLimit = 100
 	}
+	svc := NewService(store, sorter, defaultLimit)
 	return &Handler{
 		store:         store,
 		logger:        logger,
 		authenticator: authenticator,
 		sorter:        sorter,
 		defaultLimit:  defaultLimit,
+		service:       svc,
 	}
 }
 
@@ -53,32 +56,17 @@ func (h *Handler) ListGPUs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get GPU IDs from store
+	// Delegate business logic to service
 	ctx := r.Context()
-	gpuIDs, err := h.store.ListGPUs(ctx)
+	response, err := h.service.ListGPUs(ctx, page, limit, sortOrder)
 	if err != nil {
 		h.logger.Error("failed to list GPUs", "error", err)
 		h.jsonError(w, http.StatusInternalServerError, "failed to list GPUs")
 		return
 	}
 
-	// Sort the results
-	h.sorter.SortStrings(gpuIDs, sortOrder)
-
-	// Paginate results
-	offset := CalculateOffset(page, limit)
-	paginatedItems := PaginateSlice(gpuIDs, offset, limit)
-
-	// Return response
-	response := ListResponse{
-		Total: len(gpuIDs),
-		Page:  page,
-		Limit: limit,
-		Items: paginatedItems,
-	}
-
 	h.jsonOK(w, response)
-	h.logger.Info("listed GPUs", "total", len(gpuIDs), "page", page, "limit", limit)
+	h.logger.Info("listed GPUs", "total", response.Total, "page", response.Page, "limit", response.Limit)
 }
 
 // QueryGPUTelemetry handles the GET /gpus/{id}/telemetry endpoint
@@ -122,33 +110,17 @@ func (h *Handler) QueryGPUTelemetry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Query telemetry data
+	// Delegate business logic to service
 	ctx := r.Context()
-	items, total, err := h.store.QueryTelemetry(
-		ctx,
-		gpuID,
-		startTime,
-		endTime,
-		limit,
-		page,
-		sortOrder == SortAscending,
-	)
+	response, err := h.service.QueryTelemetry(ctx, gpuID, startTime, endTime, limit, page, sortOrder)
 	if err != nil {
 		h.logger.Error("failed to query telemetry", "gpu_id", gpuID, "error", err)
 		h.jsonError(w, http.StatusInternalServerError, "failed to query telemetry")
 		return
 	}
 
-	// Return response
-	response := QueryResponse{
-		Total: total,
-		Page:  page,
-		Limit: limit,
-		Items: items,
-	}
-
 	h.jsonOK(w, response)
-	h.logger.Info("queried telemetry", "gpu_id", gpuID, "total", total, "page", page)
+	h.logger.Info("queried telemetry", "gpu_id", gpuID, "total", response.Total, "page", response.Page)
 }
 
 // jsonOK writes a successful JSON response

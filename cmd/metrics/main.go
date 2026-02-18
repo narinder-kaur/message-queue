@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/message-streaming-app/internal/common"
 	"github.com/message-streaming-app/internal/metrics"
 	"github.com/message-streaming-app/internal/storage"
@@ -59,39 +60,12 @@ func main() {
 		config.DefaultLimit,
 	)
 
-	// Setup HTTP routes
-	mux := http.NewServeMux()
+	// Setup Gin router and register routes (adapter preserves existing handler logic)
+	gin.SetMode(gin.ReleaseMode)
+	router := gin.New()
+	router.Use(gin.Recovery())
 
-	// Apply middleware
-	loggingMiddleware := metrics.LoggingMiddleware(logger)
-	authMiddleware := metrics.AuthMiddleware(authenticator, logger)
-
-	// Mount handler with middleware
-	mux.HandleFunc("/api/v1/gpus", chainMiddleware(
-		handler.ListGPUs,
-		loggingMiddleware,
-		authMiddleware,
-	))
-
-	mux.HandleFunc("/api/v1/gpus/", chainMiddleware(
-		handler.QueryGPUTelemetry,
-		loggingMiddleware,
-		authMiddleware,
-	))
-
-	// Health check endpoint
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `{"status":"ok"}`)
-	})
-
-	// Health check endpoint
-	mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `{"status":"ok"}`)
-	})
+	metrics.RegisterGinRoutes(router, handler, logger, authenticator)
 
 	// Start server
 	addr := fmt.Sprintf(":%s", config.Port)
@@ -99,7 +73,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:    addr,
-		Handler: mux,
+		Handler: router,
 	}
 
 	// Run server in background
@@ -154,17 +128,4 @@ func newConfigFromEnv() *config {
 }
 
 // chainMiddleware chains multiple HTTP middleware functions
-func chainMiddleware(handlerFunc http.HandlerFunc, middlewares ...func(http.Handler) http.Handler) http.HandlerFunc {
-	// Convert handlerFunc to Handler
-	handler := http.Handler(handlerFunc)
-
-	// Apply middlewares in reverse order to get the correct execution order
-	for i := len(middlewares) - 1; i >= 0; i-- {
-		handler = middlewares[i](handler)
-	}
-
-	// Return as HandlerFunc
-	return func(w http.ResponseWriter, r *http.Request) {
-		handler.ServeHTTP(w, r)
-	}
-}
+// chainMiddleware removed; Gin adapter is used instead to keep handlers unchanged

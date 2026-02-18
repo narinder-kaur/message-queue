@@ -9,8 +9,12 @@ nodes:
     protocol: tcp # Optional, defaults to tcp
 - role: worker
   extraPortMappings:
-    - containerPort: 31001
+    - containerPort: 31001 #constant port for mongo service
       hostPort: 31001
+      listenAddress: "0.0.0.0" # Optional, defaults to "0.0.0.0"
+      protocol: tcp
+    - containerPort: 31002 # constant port for metrics service
+      hostPort: 31002
       listenAddress: "0.0.0.0" # Optional, defaults to "0.0.0.0"
       protocol: tcp
   extraMounts:

@@ -139,7 +139,16 @@ install-tools:
 	@which python3 > /dev/null || (echo "Python3 is not installed. Please install Python3 to proceed." && exit 1)
 	@echo "Installing apispec..."
 	@go install github.com/ehabterra/apispec/cmd/apispec@latest
+	@echo "Installing yaml-merge-cli..."
+	@go install github.com/ericwenn/yaml-merge-cli
 
+.PHONY: generate-openapi
+generate-openapi: install-tools
+	@echo "Generating OpenAPI specification..."
+	@apispec -o tempout.yaml
+	@go get github.com/ericwenn/yaml-merge-cli
+	yaml-merge-cli tempout.yaml apispec.yaml > openapi.yaml
+	rm tempout.yaml
 # target to run yaml linting using kubeval
 .PHONY: lint-yaml
 lint-yaml:

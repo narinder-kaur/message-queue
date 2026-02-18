@@ -4,11 +4,12 @@ kind: Service
 metadata:
   name: {{ include "msa.fullname" . }}-metrics
 spec:
-  type: {{ .Values.service.type }}
+  type: {{ .Values.metrics.service.type }}
   selector:
     app: {{ include "msa.fullname" . }}-metrics
   ports:
-    - port: {{ .Values.metrics.port }}
-      targetPort: {{ .Values.metrics.port }}
+    - port: {{ .Values.metrics.service.port }}
+      targetPort: {{ .Values.metrics.service.port }}
+      nodePort: {{ .Values.metrics.service.nodePort }}
       protocol: TCP
 {{- end }}
