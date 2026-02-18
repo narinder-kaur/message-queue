@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/message-streaming-app/internal/common"
 	"github.com/message-streaming-app/internal/metrics"
 	"github.com/message-streaming-app/internal/storage"
 )
@@ -143,21 +144,13 @@ func newConfigFromEnv() *config {
 	}
 
 	return &config{
-		Port:         getEnv("METRICS_PORT", "8080"),
-		MongoURI:     getEnv("MONGODB_URI", "mongodb://localhost:27017"),
-		DBName:       getEnv("MONGODB_DATABASE", "message_streaming"),
-		Collection:   getEnv("MONGO_COLLECTION", "metrics"),
+		Port:         common.GetEnv("METRICS_PORT", "8080"),
+		MongoURI:     common.GetEnv("MONGODB_URI", "mongodb://localhost:27017"),
+		DBName:       common.GetEnv("MONGODB_DATABASE", "message_streaming"),
+		Collection:   common.GetEnv("MONGO_COLLECTION", "metrics"),
 		AuthToken:    os.Getenv("AUTH_TOKEN"),
 		DefaultLimit: defaultLimit,
 	}
-}
-
-// getEnv returns an environment variable or a default value
-func getEnv(key, defaultVal string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return defaultVal
 }
 
 // chainMiddleware chains multiple HTTP middleware functions

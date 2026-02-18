@@ -78,7 +78,7 @@ func (p *Producer) StreamCSVMetrics(csvPath string, tsColumnName, labelsColumnNa
 			p.logger.Warn(fmt.Sprintf("failed to write message at row %d: %v", rowCount+1, err))
 			return rowCount, fmt.Errorf("failed to write message at row %d: %w", rowCount+1, err)
 		}
-
+		time.Sleep(100 * time.Microsecond)
 		rowCount++
 	}
 

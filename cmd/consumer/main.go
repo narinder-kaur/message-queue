@@ -3,48 +3,51 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"fmt"
 	"net"
-	"os"
 	"time"
 
+	"github.com/message-streaming-app/internal/common"
 	"github.com/message-streaming-app/internal/message"
 	"github.com/message-streaming-app/internal/protocol"
 	"github.com/message-streaming-app/internal/storage"
 )
 
 func main() {
-	addr := getEnv("BROKER_ADDR", "localhost:9080")
+	logger := common.GetLogger()
+	addr := common.GetEnv("BROKER_ADDR", "localhost:9080")
 
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
-		log.Fatalf("dial(%v): %v", addr, err)
+		logger.Error("dial(%v): %v", "addr", addr, "error", err)
 	}
 	defer conn.Close()
 
 	// Identify as consumer
 	if _, err := conn.Write([]byte("CONSUMER\n")); err != nil {
-		log.Fatalf("write role: %v", err)
+		logger.Error(fmt.Sprintf("write role: %v", err.Error()))
+		panic("failed to identify as consumer: " + err.Error())
 	}
 
-	log.Printf("Connected as consumer to %s", addr)
+	logger.Info(fmt.Sprintf("Connected as consumer to %s", addr))
 
 	// Initialize MongoDB storage
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	mongoURI := getEnv("MONGODB_URI", "mongodb://localhost:27017")
-	dbName := getEnv("MONGODB_DATABASE", "message_streaming")
-	collectionName := getEnv("MONGO_COLLECTION", "metrics")
+	mongoURI := common.GetEnv("MONGODB_URI", "mongodb://localhost:27017")
+	dbName := common.GetEnv("MONGODB_DATABASE", "message_streaming")
+	collectionName := common.GetEnv("MONGO_COLLECTION", "metrics")
 
 	mongoStore, err := storage.NewMongoStore(ctx, mongoURI, dbName, collectionName)
 	cancel()
 	if err != nil {
-		log.Fatalf("initialize MongoDB store: %v", err)
+		logger.Error("initialize MongoDB store: %v", "error", err)
+		panic("Error initiaizing MongoDB store")
 	}
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := mongoStore.Close(ctx); err != nil {
-			log.Printf("close MongoDB: %v", err)
+			logger.Error("close MongoDB: %v", "error", err)
 		}
 	}()
 
@@ -52,30 +55,23 @@ func main() {
 	for {
 		body, err := protocol.ReadFrame(conn, buf)
 		if err != nil {
-			log.Printf("read: %v", err)
+			logger.Error("read: %v", "error", err)
 			return
 		}
 		buf = body
 
 		var msg message.Message
 		if err := json.Unmarshal(body, &msg); err != nil {
-			log.Printf("invalid JSON: %v", err)
+			logger.Error("invalid JSON: %v", "error", err)
 			continue
 		}
-		log.Printf("[notification] id=%s type=%s ts=%s payload=%s", msg.ID, msg.Type, msg.Timestamp.Format("15:04:05"), string(msg.Payload))
+		logger.Debug("[notification] id=%s type=%s ts=%s payload=%s", msg.ID, msg.Type, msg.Timestamp.Format("15:04:05"), string(msg.Payload))
 
 		// Store message in MongoDB (unmarshal handled by store)
 		if err := mongoStore.StoreMessage(msg); err != nil {
-			log.Printf("failed to store message in MongoDB: %v", err)
+			logger.Error("failed to store message in MongoDB: %v", "error", err)
 			// Continue processing even if MongoDB store fails
 			continue
 		}
 	}
-}
-
-func getEnv(key, defaultVal string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return defaultVal
 }

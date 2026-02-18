@@ -1,0 +1,32 @@
+{{- if .Values.mongodbService.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "msa.fullname" . }}-mongodb
+spec:
+  type: {{ .Values.mongodbService.type }}
+  selector:
+    app: {{ include "msa.fullname" . }}-mongodb
+  ports:
+    - port: {{ .Values.mongodbService.port }}
+      targetPort: {{ .Values.mongodbService.port }}
+      nodePort: {{ .Values.mongodbService.nodePort }}
+      protocol: TCP
+
+{{- else }}
+{{- if .Values.mongodb.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "msa.fullname" . }}-mongodb
+  labels:
+    {{ include "msa.labels" . | nindent 4 }}
+spec:
+  ports:
+    - port: 27017
+      targetPort: 27017
+  clusterIP: None
+  selector:
+    app: {{ include "msa.fullname" . }}-mongodb
+{{- end }}
+{{- end }}

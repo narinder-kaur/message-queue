@@ -91,7 +91,7 @@ service:
   port: 8080
 
 mongodbService:
-  enabled: false
+  enabled: true
   type: NodePort
   port: 27017
   nodePort: 31001

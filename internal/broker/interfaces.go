@@ -65,7 +65,7 @@ type ConsumerRegistry interface {
 	UnregisterConsumer(id string)
 
 	// BroadcastMessage sends a message to all registered consumers
-	BroadcastMessage(msg []byte)
+	BroadcastMessage(msg []byte) error
 
 	// GetConsumerCount returns the number of registered consumers
 	GetConsumerCount() int

@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 
+	"github.com/message-streaming-app/internal/common"
 	"github.com/message-streaming-app/internal/protocol"
 )
 
@@ -90,7 +91,11 @@ func (b *Broker) handleProducer(reader FrameReader) {
 		// Enqueue the message based on delivery mode
 		switch b.mode {
 		case Broadcast:
-			b.registry.BroadcastMessage(body)
+			err := b.registry.BroadcastMessage(body)
+			if err != nil {
+				b.logger.Warn("failed to broadcast message", "error", err)
+			}
+
 		case Queue:
 			if err := b.queue.Enqueue(body); err != nil {
 				b.logger.Warn("failed to enqueue message", "error", err)
@@ -114,7 +119,8 @@ func (b *Broker) handleConsumer(writer FrameWriter) {
 // handleConsumerBroadcast handles a consumer in broadcast mode
 func (b *Broker) handleConsumerBroadcast(writer FrameWriter) {
 	// Create a channel for this consumer
-	ch := make(chan []byte, 64)
+	ChannelBufferSize := common.GetEnvInt("CONSUMER_CHANNEL_BUFFER_SIZE", 10000)
+	ch := make(chan []byte, ChannelBufferSize)
 
 	// Register the consumer
 	consumerID := b.registry.RegisterConsumer(ch)

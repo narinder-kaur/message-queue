@@ -18,7 +18,7 @@ func main() {
 	envReader := producer.NewSimpleEnvironmentReader()
 
 	// Get configuration from environment
-	brokerAddr := envReader.Get("BROKER_ADDR", "localhost:9000")
+	brokerAddr := envReader.Get("BROKER_ADDR", "localhost:9080")
 	csvPath := envReader.Get("CSV_PATH", filepath.Join("../../", "internal", "data", "dcgm_metrics_20250718_134233.csv"))
 
 	// Establish connection to broker

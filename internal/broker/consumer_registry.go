@@ -1,9 +1,11 @@
 package broker
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/message-streaming-app/internal/common"
 )
 
 // BroadcastRegistry manages consumer channels for broadcast delivery mode
@@ -15,8 +17,9 @@ type BroadcastRegistry struct {
 
 // NewBroadcastRegistry creates a new consumer registry
 func NewBroadcastRegistry(logger Logger) *BroadcastRegistry {
+	ChannelBufferSize := common.GetEnvInt("MAX_CONSUMERS", 10)
 	return &BroadcastRegistry{
-		consumers: make(map[string]chan []byte),
+		consumers: make(map[string]chan []byte, ChannelBufferSize),
 		logger:    logger,
 	}
 }
@@ -45,7 +48,7 @@ func (r *BroadcastRegistry) UnregisterConsumer(id string) {
 }
 
 // BroadcastMessage sends a message to all registered consumers
-func (r *BroadcastRegistry) BroadcastMessage(msg []byte) {
+func (r *BroadcastRegistry) BroadcastMessage(msg []byte) error {
 	r.mu.RLock()
 	chans := make([]chan []byte, 0, len(r.consumers))
 	for _, ch := range r.consumers {
@@ -59,8 +62,10 @@ func (r *BroadcastRegistry) BroadcastMessage(msg []byte) {
 		case ch <- msgCopy:
 		default:
 			r.logger.Warn("consumer channel full, dropping message")
+			return fmt.Errorf("consumer channel full")
 		}
 	}
+	return nil
 }
 
 // GetConsumerCount returns the number of registered consumers

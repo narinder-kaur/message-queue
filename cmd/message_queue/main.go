@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/message-streaming-app/internal/broker"
+	"github.com/message-streaming-app/internal/common"
 )
 
 func main() {
@@ -18,10 +19,10 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 	// Get configuration from environment
-	deliveryModeStr := strings.ToLower(getEnv("DELIVERY_MODE", "broadcast"))
+	deliveryModeStr := strings.ToLower(common.GetEnv("DELIVERY_MODE", "broadcast"))
 	deliveryMode := broker.ParseDeliveryMode(deliveryModeStr)
-	tcpAddr := getEnv("TCP_PORT", "9080")
-	httpPort := getEnv("HTTP_PORT", "8080")
+	tcpAddr := common.GetEnv("TCP_PORT", "9080")
+	httpPort := common.GetEnv("HTTP_PORT", "8080")
 
 	// Create broker
 	srv := broker.NewBroker(deliveryMode, logger)
@@ -74,10 +75,4 @@ func main() {
 	time.Sleep(1 * time.Second)
 
 	logger.Info("shutdown complete")
-}
-func getEnv(key, defaultVal string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return defaultVal
 }
