@@ -6,3 +6,7 @@ Producer (CronJob):
   kubectl get cronjob {{ include "msa.fullname" . }}-producer
 MongoDB Service:
   kubectl get svc {{ include "msa.fullname" . }}-mongodb
+Message Queue Service:
+  kubectl get svc {{ include "msa.fullname" . }}-message-queue
+Metrics Service:
+ kubectl get svc {{ include "msa.fullname" . }}-metrics

@@ -113,7 +113,7 @@ components:
     github.com_gin-gonic_gin.H:
       type: object
 servers:
-  - description: Localhost server
-    url: http://localhost:8080
   - description: Kube server
     url: http://localhost:31002
+  - description: Localhost server
+    url: http://localhost:8080

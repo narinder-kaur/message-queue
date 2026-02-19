@@ -1,7 +1,7 @@
 # Message Streaming App - Build targets
 BINDIR ?= bin
 # compute short git hash for tagging images; allow override via TAG env
-TAG := $(shell git rev-parse --short HEAD 2>/dev/null || echo latest)
+TAG ?=latest
 
 # per-service image names
 CONSUMER_IMAGE ?= $(REGISTRY)/consumer
@@ -9,7 +9,7 @@ MESSAGE_QUEUE_IMAGE ?= $(REGISTRY)/message-queue
 METRICS_IMAGE ?= $(REGISTRY)/metrics
 PRODUCER_IMAGE ?= $(REGISTRY)/producer
 
-.PHONY: docker-build-all docker-push-all docker-build docker-push check_login. check_docker_registry check_docker_credentials
+.PHONY: docker-build-all docker-push-all docker-build docker-push docker_login. check_docker_registry check_docker_credentials
 
 .DEFAULT_GOAL := all
 
@@ -55,19 +55,20 @@ docker-build-producer: check_docker_registry
 docker-build-all: docker-build-consumer docker-build-message-queue docker-build-metrics docker-build-producer
 
 
-docker-push-consumer: check_login
+docker-push-consumer: docker_login docker-build-consumer
 	@echo "--- Pushing consumer image to registry ---"
 	docker push $(CONSUMER_IMAGE):$(TAG)
+	docker push $(CONSUMER_IMAGE):latest
 
-docker-push-message-queue: check_login
+docker-push-message-queue: docker_login docker-build-message-queue
 	@echo "--- Pushing message queue image to registry ---"
 	docker push $(MESSAGE_QUEUE_IMAGE):$(TAG)
 
-docker-push-metrics: check_login
+docker-push-metrics: docker_login docker-build-metrics
 	@echo "--- Pushing metrics image to registry ---"
 	docker push $(METRICS_IMAGE):$(TAG)
 
-docker-push-producer: check_login
+docker-push-producer: docker_login docker-build-producer
 	@echo "--- Pushing producer image to registry ---"
 	docker push $(PRODUCER_IMAGE):$(TAG)
 
@@ -76,8 +77,8 @@ docker-push-all: docker-push-consumer docker-push-message-queue docker-push-metr
 check_docker_registry:
 	@echo "--- Checking Docker registry environment variable ---"
 	@if [ -z "$(REGISTRY)" ]; then \
-		echo "Error: REGISTRY environment variable is not set. Please set it to your Docker registry URL (e.g., docker.io/yourusername)"; \
-		exit 1; \
+		echo "Error: REGISTRY environment variable is not set. Setting it to default value: docker.io/narinder"; \
+		REGISTRY=docker.io/narinder; \
 	fi
 
 check_docker_credentials:
@@ -91,9 +92,12 @@ check_docker_credentials:
 		exit 1; \
 	fi
 
-check_login:
+docker_login:
 	@echo "--- Ensuring Docker login ---"
-	@docker login $(REGISTRY) --username $(DOCKER_USERNAME) --password-stdin <<< "$(DOCKER_PASSWORD)"
+	$(MAKE) check_docker_registry; \
+	$(MAKE) check_docker_credentials; \
+	echo "Logging in to Docker registry $(REGISTRY) with username $(DOCKER_USERNAME)"; \
+	docker login $(REGISTRY) --username $(DOCKER_USERNAME) --password-stdin <<< "$(DOCKER_PASSWORD)"
 
 # Build OpenAPI spec using apispec
 .PHONY: build-spec
@@ -139,9 +143,9 @@ install-tools:
 	@which python3 > /dev/null || (echo "Python3 is not installed. Please install Python3 to proceed." && exit 1)
 	@echo "Installing apispec..."
 	@go install github.com/ehabterra/apispec/cmd/apispec@latest
-	@echo "Installing yaml-merge-cli..."
-	@go get github.com/ericwenn/yaml-merge-cli
-
+	@echo "Installing yq..."
+	@which yq > /dev/null || (echo "yq is not installed. Installing yq..." && go install github.com/mikefarah/yq/v4@latest)
+	
 .PHONY: generate-openapi
 generate-openapi: install-tools
 	@echo "Generating OpenAPI specification..."
@@ -157,15 +161,41 @@ lint-yaml:
 	@echo "Linting YAML files with yamlLint..."
 	@docker run -it --rm -v "$(CURDIR):/code" pipelinecomponents/yamllint yamllint .
 
+# Helm deployment target
 .PHONY: deploy
-deploy:
+deploy: check-install-deploy-dependencies create-cluster
 	@echo "Deploying application using Helm..."
 	helm upgrade --install message-streaming-app charts/message-streaming-app -f charts/message-streaming-app/values.yaml --set consumer.image.tag=$(TAG) \
 		--set messageQueue.image.tag=$(TAG) \
 		--set metrics.image.tag=$(TAG) \
-		--set producer.image.tag=$(TAG)
+		--set producer.image.tag=$(TAG) \
+		--wait --atomic
+	@$(MAKE) get-metrics-endpoint
+
+# Target to check and install dependencies for deployment (docker, helm, kind)
+.PHONY: check-install-deploy-dependencies
+check-install-deploy-dependencies: 
+	@echo "Check if docker is installed..."
+	@(which docker > /dev/null && echo "Docker is installed.") || ((echo "ERROR: Docker is not installed. Installing it Before deploying application" && exit 1) )
+	@echo "Check if helm is installed..."
+	@(which helm > /dev/null && echo "Helm is installed.") || ((echo "Helm is not installed. Installing it") && (curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash))
+	@./scripts/install_envsubst.sh
+
+.PHONY: install-kind
+install-kind: 
+		@chmod +x scripts/install_kind.sh
+		@./scripts/install_kind.sh
+
+.PHONY: get-metrics-endpoint
+get-metrics-endpoint:
+	@port=$(shell kubectl get svc message-streaming-app-metrics -o jsonpath='{.spec.ports[0].nodePort}') && echo "Metrics endpoint: http://localhost:$$port/swagger/index.html"
+
+.PHONY: delete-cluster	
+delete-cluster:
+	@echo "Deleting kind cluster..."
+	@kind delete cluster --name kind-cluster
 
 .PHONY: create-cluster
-create-cluster:
-	@echo "Creating Kubernetes cluster with kind..."
-	export HOSTPATH="$(CURDIR)/internal/data" && envsubst < ./kind/config.yaml | kind create cluster --name kind-cluster --config -
+create-cluster: install-kind
+	@chmod +x scripts/create_cluster.sh
+	@./scripts/create_cluster.sh

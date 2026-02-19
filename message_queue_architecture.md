@@ -25,18 +25,19 @@ The broker supports two delivery modes:
 ## Data flow
 
 ```mermaid
+%%{init: {"theme":"base"}}%%
 sequenceDiagram
-    participant Producer
-    participant Broker
-    participant Registry
-    participant Queue
-    participant Consumer
-    Producer->>Broker: Connect & send role "PRODUCER"
-    Producer->>Broker: Send framed message
-    Broker->>Registry: BroadcastMessage(msg) (broadcast mode)
-    Broker->>Queue: Enqueue(msg) (queue mode)
-    Registry->>Consumer: send(msg) (each registered consumer)
-    Queue->>Consumer: Dequeue() (one consumer)
+    participant P as Producer
+    participant B as Broker
+    participant R as Registry
+    participant Q as Queue
+    participant C as Consumer
+    P->>B: Connect & send role "PRODUCER"
+    P->>B: Send framed message
+    B->>R: BroadcastMessage(msg) (broadcast mode)
+    B->>Q: Enqueue(msg) (queue mode)
+    R->>C: send(msg) (each registered consumer)
+    Q->>C: Dequeue() (one consumer)
 ```
 
 ## Configuration and env variables

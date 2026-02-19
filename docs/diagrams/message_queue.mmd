@@ -1,0 +1,13 @@
+%%{init: {"theme":"base"}}%%
+sequenceDiagram
+    participant P as Producer
+    participant B as Broker
+    participant R as Registry
+    participant Q as Queue
+    participant C as Consumer
+    P->>B: Connect & send role "PRODUCER"
+    P->>B: Send framed message
+    B->>R: BroadcastMessage(msg) (broadcast mode)
+    B->>Q: Enqueue(msg) (queue mode)
+    R->>C: send(msg) (each registered consumer)
+    Q->>C: Dequeue() (one consumer)

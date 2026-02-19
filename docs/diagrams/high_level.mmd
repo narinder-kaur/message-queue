@@ -1,0 +1,6 @@
+%%{init: {"theme":"base"}}%%
+flowchart LR
+  P[Producer<br/>CSV] -- "TCP frames" --> B[Message Broker]
+  B -- "broadcast / queue" --> C[Consumer]
+  C -- "store" --> DB[(MongoDB)]
+  M[Metrics HTTP Service] -- "query" --> DB
